@@ -12,7 +12,7 @@
 // (Consider reserving 64 vertices worth of space if you'd like to fit all your positions in a single vertex array)
 
 
-//*** first square defined:
+//first square defined (2d array)
 static const int line_vertex_count = 8;
 static const Vector2 line_vertex_positions[line_vertex_count]
 {
@@ -29,18 +29,24 @@ static const Vector2 line_vertex_positions[line_vertex_count]
     { -1.0f,  -1.0f }    // bottom-left
 };
 
+
+
 int main()
 {
+	//create storage for all squares (64 vertices)
     //8 squares, each with 8 vertices
+    //copying the base square into all_squares[0] as the starting shape
     Vector2 all_squares[8][8]; 
     memcpy(all_squares[0], line_vertex_positions, sizeof(line_vertex_positions));
 
 
-    // Generate smaller squares using midpoint logic
+    //7 smaller squares
     for (int i = 1; i < 8; ++i)
     {
         for (int j = 0; j < 8; j += 2)
         {
+            //Vector2Lerp computes the midpoint between two vertices
+            //all_squares[1] is centered inside all_squares[0] and so on
             Vector2 mid1 = Vector2Lerp(all_squares[i - 1][j], all_squares[i - 1][j + 1], 0.5f);
             Vector2 mid2 = Vector2Lerp(all_squares[i - 1][(j + 2) % 8], all_squares[i - 1][(j + 3) % 8], 0.5f);
             all_squares[i][j] = mid1;
@@ -49,31 +55,31 @@ int main()
     }
 
 
-    // (For full marks, you need to automate this with loops or recursion for 8 iterations [meaning 8 squares])
 
     CreateWindow(800, 800, "Graphics 1");
+ 
     
-    // Hint: The a1_triangle shaders handle vertex position AND vertex colour.
-    // Vertex colour is needed in order to receive full marks on this assignment!
     GLuint a2_lines_vert = CreateShader(GL_VERTEX_SHADER, "./assets/shaders/a2_lines.vert");
     GLuint a2_lines_frag = CreateShader(GL_FRAGMENT_SHADER, "./assets/shaders/a2_lines.frag");
     GLuint a2_lines_shader = CreateProgram(a2_lines_vert, a2_lines_frag);
 
-    // Combine all squares into one array for buffer upload
+
+
+    //combine all squares into one array for buffer upload
+    //flatten the 2d all_squares into a 1d vertex_data array of 64 Vector2s
     Vector2 vertex_data[8 * line_vertex_count];
     memcpy(vertex_data, all_squares, sizeof(vertex_data));
 
 
-    // Vertex Buffer Object
+    //vertex Buffer Object
     GLuint vbo_line_positions;
     glGenBuffers(1, &vbo_line_positions);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_line_positions);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
     //glBufferData(GL_ARRAY_BUFFER, sizeof(line_vertex_positions2), line_vertex_positions2, GL_STATIC_DRAW);
-    // Comment/uncomment to see 1st square vs 2nd square.
-    // Your job is to automate the generation of squares so all 8 squares are rendered at once!
+    
 
-    // Vertex Array Object
+    //vertex Array Object
     GLuint vao_line;
     glGenVertexArrays(1, &vao_line);
     glBindVertexArray(vao_line);
@@ -82,11 +88,11 @@ int main()
     glBindVertexArray(GL_NONE);
     glBindBuffer(GL_ARRAY_BUFFER, GL_NONE);
 
-    // Uniforms
+    //uniforms
     GLint u_color = glGetUniformLocation(a2_lines_shader, "u_color");
     GLint u_mvp = glGetUniformLocation(a2_lines_shader, "u_mvp");
 
-    // 8 unique colors
+    //8 colors
     Vector3 colors[8] = {
         {1.0f, 0.0f, 0.0f}, // red
         {0.0f, 1.0f, 0.0f}, // green
@@ -116,6 +122,8 @@ int main()
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+        //Compute world and mvp matrix each frame
         glUseProgram(a2_lines_shader);
         glUniformMatrix4fv(u_mvp, 1, GL_FALSE, &mvp.m0);
 
@@ -124,12 +132,14 @@ int main()
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vector2), 0);
         glLineWidth(4.0f);
 
-        // Draw all 8 squares in one loop
+        //draw all 8 squares in one loop
         for (int i = 0; i < 8; ++i)
         {
             glUniform3f(u_color, colors[i].x, colors[i].y, colors[i].z);
             glBufferData(GL_ARRAY_BUFFER, sizeof(all_squares[i]), all_squares[i], GL_STATIC_DRAW);
             glDrawArrays(GL_LINES, 0, line_vertex_count);
+
+            //call glBufferData again here to upload the single all_squares[i] before drawing
         }
 
 
